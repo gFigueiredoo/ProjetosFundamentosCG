@@ -1,5 +1,5 @@
 # Grupo
 
-Gabriel Figueiredo, Conrado Maia, Julia Oliveira
+Gabriel Figueiredo
 
 ### Preparando o repositório
