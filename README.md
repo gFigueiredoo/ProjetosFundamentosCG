@@ -27,4 +27,4 @@ N: Instancia um novo cubo
 
 App:
 
-c:\Users\I574585\AppData\Local\Packages\MicrosoftWindows.Client.Core_cw5n1h2txyewy\TempState\ScreenClip\{D8F996D9-0A34-4D9B-98A0-DE58752C6F44}.png
+![alt text](image.png)
