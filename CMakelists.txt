@@ -45,7 +45,7 @@ include_directories(${stb_image_SOURCE_DIR})
 set(EXERCISES
     src/modulo1/Modulo1_Hello3D
     src/modulo2/Modulo2_Cubo
-    #src/vivenciais/Modulo2_Cubo
+    src/AtividadeVivencial1/vivencial1
     src/examples/TriangleTex
 )
 
