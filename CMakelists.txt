@@ -41,11 +41,12 @@ include_directories(${CMAKE_SOURCE_DIR}/include/glad)
 include_directories(${glm_SOURCE_DIR})
 include_directories(${stb_image_SOURCE_DIR})
 
-
-# Lista de exemplos/exercícios podem ser colocados aqui também
+# Lista de exemplos/exercícios com seus caminhos completos
 set(EXERCISES
-    Modulo1_Hello3D
-    Modulo2_Cubo
+    src/modulo1/Modulo1_Hello3D
+    src/modulo2/Modulo2_Cubo
+    #src/vivenciais/Modulo2_Cubo
+    src/examples/TriangleTex
 )
 
 add_compile_options(-Wno-pragmas)
@@ -71,7 +72,15 @@ endif()
 
 # Cria os executáveis
 foreach(EXERCISE ${EXERCISES})
-    add_executable(${EXERCISE} src/${EXERCISE}.cpp ${GLAD_C_FILE})
-    target_include_directories(${EXERCISE} PRIVATE ${CMAKE_SOURCE_DIR}/include/glad ${glm_SOURCE_DIR} ${stb_image_SOURCE_DIR})
-    target_link_libraries(${EXERCISE} glfw ${OPENGL_LIBS})
+    # Extrai o nome do executável a partir do caminho (exemplo: Modulo1_Hello3D)
+    get_filename_component(EXE_NAME ${EXERCISE} NAME)
+
+    # Verifica se o arquivo fonte existe
+    if (EXISTS ${CMAKE_SOURCE_DIR}/${EXERCISE}.cpp)
+        add_executable(${EXE_NAME} ${CMAKE_SOURCE_DIR}/${EXERCISE}.cpp ${GLAD_C_FILE})
+        target_include_directories(${EXE_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include/glad ${glm_SOURCE_DIR} ${stb_image_SOURCE_DIR})
+        target_link_libraries(${EXE_NAME} glfw ${OPENGL_LIBS})
+    else()
+        message(WARNING "Arquivo fonte ${EXERCISE}.cpp não encontrado. Ignorando ${EXE_NAME}.")
+    endif()
 endforeach()
