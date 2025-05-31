@@ -2,4 +2,7 @@
 
 Gabriel Figueiredo
 
-### Tarefa - Criando o ambiente de Programação de cenas 3D
+## Tarefa - Criando o ambiente de Programação de cenas 3D
+
+### Modulo 1:
+![{60400CEA-B92C-4C95-993D-D5A26F1C09A3}](https://github.com/user-attachments/assets/94c35a16-2929-4f43-b9f4-3a11f9bb7336)
