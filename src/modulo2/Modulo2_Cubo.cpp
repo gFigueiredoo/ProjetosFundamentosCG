@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <vector>
 #include <assert.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -39,12 +40,25 @@ const GLchar* fragmentShaderSource = "#version 450\n"
 "}\n\0";
 
 bool rotateX = false, rotateY = false, rotateZ = false;
+float scaleFactor = 1.0f;
+
+// Estrutura para representar um cubo
+struct Cube {
+    glm::vec3 position;
+    glm::vec3 scale;
+};
+
+// Vetor de cubos
+vector<Cube> cubes = { {glm::vec3(0.0f), glm::vec3(1.0f)} };
+
+// Índice do cubo atualmente selecionado
+int selectedCubeIndex = 0;
 
 int main() {
     glfwInit();
 
     // Criação da janela GLFW
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Cubo 3D - OpenGL", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Cubo 3D - Gabriel Figueiredo!", nullptr, nullptr);
     glfwMakeContextCurrent(window);
 
     // Callback de teclado
@@ -73,9 +87,7 @@ int main() {
 
     glUseProgram(shaderID);
 
-    glm::mat4 model = glm::mat4(1);
     GLint modelLoc = glGetUniformLocation(shaderID, "model");
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     glEnable(GL_DEPTH_TEST);
 
@@ -89,19 +101,27 @@ int main() {
         glLineWidth(10);
         glPointSize(20);
 
-        float angle = (GLfloat)glfwGetTime();
-        model = glm::mat4(1);
-
-        if (rotateX) model = glm::rotate(model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
-        else if (rotateY) model = glm::rotate(model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-        else if (rotateZ) model = glm::rotate(model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
-
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
 
+        for (size_t i = 0; i < cubes.size(); ++i) {
+            Cube& cube = cubes[i];
+
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, cube.position);
+            model = glm::scale(model, cube.scale * scaleFactor);
+
+            if (i == selectedCubeIndex) {
+                // Aplica rotação apenas ao cubo selecionado
+                if (rotateX) model = glm::rotate(model, (GLfloat)glfwGetTime(), glm::vec3(1.0f, 0.0f, 0.0f));
+                if (rotateY) model = glm::rotate(model, (GLfloat)glfwGetTime(), glm::vec3(0.0f, 1.0f, 0.0f));
+                if (rotateZ) model = glm::rotate(model, (GLfloat)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+            }
+
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+
+        glBindVertexArray(0);
         glfwSwapBuffers(window);
     }
 
@@ -130,6 +150,28 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         rotateX = false;
         rotateY = false;
         rotateZ = true;
+    }
+
+    // Movimentação do cubo selecionado
+    if (key == GLFW_KEY_W && action == GLFW_PRESS) cubes[selectedCubeIndex].position.z -= 0.1f;
+    if (key == GLFW_KEY_S && action == GLFW_PRESS) cubes[selectedCubeIndex].position.z += 0.1f;
+    if (key == GLFW_KEY_A && action == GLFW_PRESS) cubes[selectedCubeIndex].position.x -= 0.1f;
+    if (key == GLFW_KEY_D && action == GLFW_PRESS) cubes[selectedCubeIndex].position.x += 0.1f;
+    if (key == GLFW_KEY_I && action == GLFW_PRESS) cubes[selectedCubeIndex].position.y += 0.1f;
+    if (key == GLFW_KEY_J && action == GLFW_PRESS) cubes[selectedCubeIndex].position.y -= 0.1f;
+
+    // Escala do cubo selecionado
+    if (key == GLFW_KEY_LEFT_BRACKET && action == GLFW_PRESS) cubes[selectedCubeIndex].scale *= 0.9f;
+    if (key == GLFW_KEY_RIGHT_BRACKET && action == GLFW_PRESS) cubes[selectedCubeIndex].scale *= 1.1f;
+
+    // Adicionar um novo cubo
+    if (key == GLFW_KEY_N && action == GLFW_PRESS) {
+        cubes.push_back({ glm::vec3(0.0f), glm::vec3(1.0f) });
+    }
+
+    // Alternar entre os cubos
+    if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+        selectedCubeIndex = (selectedCubeIndex + 1) % cubes.size();
     }
 }
 
@@ -175,53 +217,53 @@ int setupShader() {
 
 int setupGeometry() {
     GLfloat vertices[] = {
-        // Face frontal
+        // Frente
         -0.5, -0.5,  0.5, 1.0, 0.0, 0.0,
-         0.5, -0.5,  0.5, 0.0, 1.0, 0.0,
-         0.5,  0.5,  0.5, 0.0, 0.0, 1.0,
+         0.5, -0.5,  0.5, 1.0, 0.0, 0.0,
+         0.5,  0.5,  0.5, 1.0, 0.0, 0.0,
         -0.5, -0.5,  0.5, 1.0, 0.0, 0.0,
-         0.5,  0.5,  0.5, 0.0, 0.0, 1.0,
-        -0.5,  0.5,  0.5, 1.0, 1.0, 0.0,
+         0.5,  0.5,  0.5, 1.0, 0.0, 0.0,
+        -0.5,  0.5,  0.5, 1.0, 0.0, 0.0,
 
-        // Face traseira
-        -0.5, -0.5, -0.5, 1.0, 0.0, 1.0,
-         0.5, -0.5, -0.5, 0.0, 1.0, 1.0,
-         0.5,  0.5, -0.5, 1.0, 1.0, 1.0,
-        -0.5, -0.5, -0.5, 1.0, 0.0, 1.0,
-         0.5,  0.5, -0.5, 1.0, 1.0, 1.0,
-        -0.5,  0.5, -0.5, 0.0, 0.0, 0.0,
-
-        // Face esquerda
-        -0.5, -0.5, -0.5, 1.0, 0.0, 0.0,
+        // Trás
+        -0.5, -0.5, -0.5, 0.0, 1.0, 0.0,
         -0.5,  0.5, -0.5, 0.0, 1.0, 0.0,
-        -0.5,  0.5,  0.5, 0.0, 0.0, 1.0,
-        -0.5, -0.5, -0.5, 1.0, 0.0, 0.0,
-        -0.5,  0.5,  0.5, 0.0, 0.0, 1.0,
-        -0.5, -0.5,  0.5, 1.0, 1.0, 0.0,
-
-        // Face direita
-         0.5, -0.5, -0.5, 1.0, 0.0, 1.0,
-         0.5,  0.5, -0.5, 0.0, 1.0, 1.0,
-         0.5,  0.5,  0.5, 1.0, 1.0, 1.0,
-         0.5, -0.5, -0.5, 1.0, 0.0, 1.0,
-         0.5,  0.5,  0.5, 1.0, 1.0, 1.0,
-         0.5, -0.5,  0.5, 0.0, 0.0, 0.0,
-
-        // Face inferior
-        -0.5, -0.5, -0.5, 1.0, 0.0, 0.0,
+         0.5,  0.5, -0.5, 0.0, 1.0, 0.0,
+        -0.5, -0.5, -0.5, 0.0, 1.0, 0.0,
+         0.5,  0.5, -0.5, 0.0, 1.0, 0.0,
          0.5, -0.5, -0.5, 0.0, 1.0, 0.0,
-         0.5, -0.5,  0.5, 0.0, 0.0, 1.0,
-        -0.5, -0.5, -0.5, 1.0, 0.0, 0.0,
-         0.5, -0.5,  0.5, 0.0, 0.0, 1.0,
-        -0.5, -0.5,  0.5, 1.0, 1.0, 0.0,
 
-        // Face superior
+        // Esquerda
+        -0.5, -0.5, -0.5, 0.0, 0.0, 1.0,
+        -0.5, -0.5,  0.5, 0.0, 0.0, 1.0,
+        -0.5,  0.5,  0.5, 0.0, 0.0, 1.0,
+        -0.5, -0.5, -0.5, 0.0, 0.0, 1.0,
+        -0.5,  0.5,  0.5, 0.0, 0.0, 1.0,
+        -0.5,  0.5, -0.5, 0.0, 0.0, 1.0,
+
+        // Direita
+         0.5, -0.5, -0.5, 1.0, 1.0, 0.0,
+         0.5,  0.5,  0.5, 1.0, 1.0, 0.0,
+         0.5, -0.5,  0.5, 1.0, 1.0, 0.0,
+         0.5, -0.5, -0.5, 1.0, 1.0, 0.0,
+         0.5,  0.5, -0.5, 1.0, 1.0, 0.0,
+         0.5,  0.5,  0.5, 1.0, 1.0, 0.0,
+
+        // Topo
         -0.5,  0.5, -0.5, 1.0, 0.0, 1.0,
-         0.5,  0.5, -0.5, 0.0, 1.0, 1.0,
-         0.5,  0.5,  0.5, 1.0, 1.0, 1.0,
+        -0.5,  0.5,  0.5, 1.0, 0.0, 1.0,
+         0.5,  0.5,  0.5, 1.0, 0.0, 1.0,
         -0.5,  0.5, -0.5, 1.0, 0.0, 1.0,
-         0.5,  0.5,  0.5, 1.0, 1.0, 1.0,
-        -0.5,  0.5,  0.5, 0.0, 0.0, 0.0,
+         0.5,  0.5,  0.5, 1.0, 0.0, 1.0,
+         0.5,  0.5, -0.5, 1.0, 0.0, 1.0,
+
+        // Base
+        -0.5, -0.5, -0.5, 0.0, 1.0, 1.0,
+         0.5, -0.5,  0.5, 0.0, 1.0, 1.0,
+        -0.5, -0.5,  0.5, 0.0, 1.0, 1.0,
+        -0.5, -0.5, -0.5, 0.0, 1.0, 1.0,
+         0.5, -0.5, -0.5, 0.0, 1.0, 1.0,
+         0.5, -0.5,  0.5, 0.0, 1.0, 1.0,
     };
 
     GLuint VBO, VAO;
