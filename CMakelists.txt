@@ -41,12 +41,17 @@ include_directories(${CMAKE_SOURCE_DIR}/include/glad)
 include_directories(${glm_SOURCE_DIR})
 include_directories(${stb_image_SOURCE_DIR})
 
-# Lista de exemplos/exercícios com seus caminhos completos
+
+# Lista de exemplos/exercícios podem ser colocados aqui também
 set(EXERCISES
-    src/modulo1/Modulo1_Hello3D
-    src/modulo2/Modulo2_Cubo
-    src/AtividadeVivencial1/vivencial1
-    src/examples/TriangleTex
+    m3
+    m4
+    m5
+    m6
+    Modulo2_Cubo
+    Hello3D
+    TriangleTex
+    SpherePhong
 )
 
 add_compile_options(-Wno-pragmas)
@@ -70,17 +75,27 @@ if (NOT EXISTS ${GLAD_C_FILE})
     message(FATAL_ERROR "Arquivo glad.c não encontrado! Baixe a GLAD manualmente em https://glad.dav1d.de/ e coloque glad.h em include/glad/ e glad.c em common/")
 endif()
 
+set(COMMON_PROJECT_SOURCES
+    ${CMAKE_SOURCE_DIR}/common/src/Camera.cpp
+    ${CMAKE_SOURCE_DIR}/common/src/Shader.cpp
+    ${CMAKE_SOURCE_DIR}/common/src/Mesh.cpp
+    ${CMAKE_SOURCE_DIR}/common/src/Curve.cpp
+    ${CMAKE_SOURCE_DIR}/common/src/Bezier.cpp
+)
+
+
 # Cria os executáveis
 foreach(EXERCISE ${EXERCISES})
-    # Extrai o nome do executável a partir do caminho (exemplo: Modulo1_Hello3D)
-    get_filename_component(EXE_NAME ${EXERCISE} NAME)
-
-    # Verifica se o arquivo fonte existe
-    if (EXISTS ${CMAKE_SOURCE_DIR}/${EXERCISE}.cpp)
-        add_executable(${EXE_NAME} ${CMAKE_SOURCE_DIR}/${EXERCISE}.cpp ${GLAD_C_FILE})
-        target_include_directories(${EXE_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include/glad ${glm_SOURCE_DIR} ${stb_image_SOURCE_DIR})
-        target_link_libraries(${EXE_NAME} glfw ${OPENGL_LIBS})
-    else()
-        message(WARNING "Arquivo fonte ${EXERCISE}.cpp não encontrado. Ignorando ${EXE_NAME}.")
-    endif()
+    add_executable(${EXERCISE} 
+                   src/${EXERCISE}.cpp  # O arquivo principal do executável
+                   ${GLAD_C_FILE}       # glad.c
+                   ${COMMON_PROJECT_SOURCES}
+    )
+    target_include_directories(${EXERCISE} PRIVATE 
+                               ${CMAKE_SOURCE_DIR}/include/glad 
+                               ${CMAKE_SOURCE_DIR}/common # Para encontrar os .h dos arquivos common/src
+                               ${glm_SOURCE_DIR} 
+                               ${stb_image_SOURCE_DIR}
+    )
+    target_link_libraries(${EXERCISE} glfw ${OPENGL_LIBS})
 endforeach()
