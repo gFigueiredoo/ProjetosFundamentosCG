@@ -56,3 +56,11 @@ N: Instancia um novo cubo
 
 - Arquivo: m6.cpp
 - Tarefa: https://www.moodle.unisinos.br/course/view.php?id=19514&section=30#tabs-tree-start
+
+![alt text]({5E3C1CA2-F4F7-45FA-BAAF-1FD5A79F3CA4}.png)
+
+![alt text]({C4359446-579E-41E1-8F53-163E9104EC75}.png)
+
+![alt text]({0224989D-AD97-42CB-8D46-DD629BAE6E76}.png)
+
+![alt text]({A1A9CF28-5AE0-4728-9560-66D5967F137D}.png)
