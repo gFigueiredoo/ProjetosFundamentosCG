@@ -11,9 +11,9 @@ using namespace std;
 class Curve
 {
 public:
-    Curve(); // Construtor
+    Curve();
     inline void setControlPoints(vector <glm::vec3> controlPoints_in) { this->controlPoints = controlPoints_in; }
-    void setShader(Shader* shader);
+    void setShader(Shader* shader_in);
     virtual void generateCurve(int pointsPerSegment) = 0;
     void drawCurve(glm::vec4 color);
     int getNbCurvePoints() { return curvePoints.size(); }
@@ -23,8 +23,8 @@ public:
 protected:
     vector <glm::vec3> controlPoints;
     vector <glm::vec3> curvePoints;
-    glm::mat4 M; // Matriz de base
-    GLuint VAO_Curve; // VAO específico para a curva
-    GLuint VBO_Curve; // VBO específico para a curva
+    glm::mat4 M;
+    GLuint VAO_Curve;
+    GLuint VBO_Curve;
     Shader* shader;
 };

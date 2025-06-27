@@ -22,9 +22,6 @@ FetchContent_Declare(
   GIT_TAG master  # Define a versão desejada da GLM
 )
 
-# Faz o download e compila as bibliotecas
-FetchContent_MakeAvailable(glfw glm)
-
 # Configura o FetchContent para baixar a stb_image automaticamente
 FetchContent_Declare(
   stb_image
@@ -32,7 +29,22 @@ FetchContent_Declare(
   GIT_TAG master
 )
 
-FetchContent_MakeAvailable(stb_image)
+# Configura o FetchContent para baixar a tinyobjloader automaticamente
+FetchContent_Declare(
+  tinyobjloader
+  GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader.git
+  GIT_TAG v2.0.0rc13
+)
+
+# Configura o FetchContent para baixar a nlohmann/json automaticamente
+FetchContent_Declare(
+  nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.12.0
+)
+
+# Faz o download e compila as bibliotecas
+FetchContent_MakeAvailable(glfw glm stb_image tinyobjloader nlohmann_json)
 
 # Adiciona as pastas de cabeçalhos
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -40,18 +52,12 @@ include_directories(${CMAKE_SOURCE_DIR}/common)
 include_directories(${CMAKE_SOURCE_DIR}/include/glad)
 include_directories(${glm_SOURCE_DIR})
 include_directories(${stb_image_SOURCE_DIR})
-
+include_directories(${tinyobjloader_SOURCE_DIR})
+include_directories(${nlohmann_json_SOURCE_DIR}/single_include)
 
 # Lista de exemplos/exercícios podem ser colocados aqui também
 set(EXERCISES
-    m3
-    m4
-    m5
-    m6
-    Modulo2_Cubo
-    Hello3D
-    TriangleTex
-    SpherePhong
+    trab 
 )
 
 add_compile_options(-Wno-pragmas)
@@ -81,21 +87,23 @@ set(COMMON_PROJECT_SOURCES
     ${CMAKE_SOURCE_DIR}/common/src/Mesh.cpp
     ${CMAKE_SOURCE_DIR}/common/src/Curve.cpp
     ${CMAKE_SOURCE_DIR}/common/src/Bezier.cpp
+    ${CMAKE_SOURCE_DIR}/common/src/Scene.cpp
 )
-
 
 # Cria os executáveis
 foreach(EXERCISE ${EXERCISES})
-    add_executable(${EXERCISE} 
-                   src/${EXERCISE}.cpp  # O arquivo principal do executável
-                   ${GLAD_C_FILE}       # glad.c
+    add_executable(${EXERCISE}
+                   src/${EXERCISE}.cpp
+                   ${GLAD_C_FILE}
                    ${COMMON_PROJECT_SOURCES}
     )
-    target_include_directories(${EXERCISE} PRIVATE 
-                               ${CMAKE_SOURCE_DIR}/include/glad 
-                               ${CMAKE_SOURCE_DIR}/common # Para encontrar os .h dos arquivos common/src
-                               ${glm_SOURCE_DIR} 
+    target_include_directories(${EXERCISE} PRIVATE
+                               ${CMAKE_SOURCE_DIR}/include/glad
+                               ${CMAKE_SOURCE_DIR}/common
+                               ${glm_SOURCE_DIR}
                                ${stb_image_SOURCE_DIR}
+                               ${tinyobjloader_SOURCE_DIR}
+                               ${nlohmann_json_SOURCE_DIR}/single_include
     )
     target_link_libraries(${EXERCISE} glfw ${OPENGL_LIBS})
 endforeach()

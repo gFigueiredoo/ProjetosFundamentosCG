@@ -1,0 +1,88 @@
+{
+  "camera": {
+    "position": [0.0, 0.0, 3.0],
+    "front": [0.0, 0.0, -1.0],
+    "up": [0.0, 1.0, 0.0],
+    "fov": 45.0,
+    "aspect_ratio": 1.142,
+    "near_plane": 0.1,
+    "far_plane": 100.0
+  },
+  "light_sources": [
+    {
+      "position": [1.0, 1.0, 1.0],
+      "ambient": [0.1, 0.1, 0.1],
+      "diffuse": [0.8, 0.8, 0.8],
+      "specular": [1.0, 1.0, 1.0],
+      "intensity": 1.0
+    }
+  ],
+  "objects": [
+    {
+      "name": "Suzanne",
+      "obj_path": "Modelos3D/Suzanne.obj",
+      "mtl_path": "Modelos3D/Suzanne.mtl",
+      "texture_path": "Modelos3D/Suzanne.png",
+      "initial_transform": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation_angle": 0.0,
+        "rotation_axis": [0.0, 1.0, 0.0],
+        "scale": 0.5
+      },
+      "animation": {
+        "type": "bezier",
+        "control_points": [
+          [0.0, 0.0, 0.0],
+          [2.0, 2.0, -2.0],
+          [4.0, 0.0, 0.0],
+          [2.0, -2.0, 2.0],
+          [0.0, 0.0, 0.0]
+        ],
+        "speed": 0.005,
+        "follow_trajectory": false
+      }
+    },
+    {
+      "name": "Cube",
+      "obj_path": "Modelos3D/Cube.obj",
+      "mtl_path": "Modelos3D/Cube.mtl",
+      "texture_path": "tex/pixelWall.png",
+      "initial_transform": {
+        "position": [-2.0, 0.0, 0.0],
+        "rotation_angle": 45.0,
+        "rotation_axis": [0.0, 1.0, 0.0],
+        "scale": 0.7
+      },
+      "animation": {
+        "type": "bezier",
+        "control_points": [
+          [-2.0, 0.0, 0.0],
+          [-4.0, 1.0, -1.0],
+          [-1.0, 2.0, 0.0],
+          [0.0, -1.0, 1.0],
+          [-2.0, 0.0, 0.0]
+        ],
+        "speed": 0.008,
+        "follow_trajectory": true
+      }
+    },
+    {
+      "name": "SuzanneSubdiv1",
+      "obj_path": "Modelos3D/SuzanneSubdiv1.obj",
+      "mtl_path": "Modelos3D/SuzanneSubdiv1.mtl",
+      "texture_path": "Modelos3D/SuzanneUV.png",
+      "initial_transform": {
+        "position": [2.0, 0.0, 0.0],
+        "rotation_angle": 0.0,
+        "rotation_axis": [0.0, 1.0, 0.0],
+        "scale": 0.5
+      },
+      "animation": {
+        "type": "none",
+        "control_points": [],
+        "speed": 0.0,
+        "follow_trajectory": false
+      }
+    }
+  ]
+}

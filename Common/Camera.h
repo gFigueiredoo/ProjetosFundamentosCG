@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "Shader.h" 
-#include <GLFW/glfw3.h> // <--- Adicione esta linha AQUI
+#include <GLFW/glfw3.h> 
 
 class Camera
 {
@@ -15,6 +15,14 @@ public:
     void update();
     void setCameraPos(int key);
     void mouseCallback(GLFWwindow* window, double xpos, double ypos);
+
+    void setCameraPosInitial(glm::vec3 pos) { cameraPos = pos; }
+    void setCameraFrontInitial(glm::vec3 front) { cameraFront = front; }
+    void setCameraUpInitial(glm::vec3 up) { cameraUp = up; }
+    void setProjection(float fov, float aspect, float near, float far) { 
+        fov_ = fov; aspect_ = aspect; near_ = near; far_ = far; 
+    }
+
 
     glm::vec3 getCameraPos() const;
     glm::mat4 getViewMatrix() const;
@@ -35,6 +43,10 @@ private:
 
     int windowWidth;
     int windowHeight;
+    float fov_;
+    float aspect_;
+    float near_;
+    float far_;
 
     void updateCameraVectors();
 };

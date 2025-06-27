@@ -14,6 +14,9 @@ void Curve::setupCurveGeometry()
 {
     if (curvePoints.empty()) return;
 
+    if (VAO_Curve != 0) glDeleteVertexArrays(1, &VAO_Curve);
+    if (VBO_Curve != 0) glDeleteBuffers(1, &VBO_Curve);
+
     glGenVertexArrays(1, &VAO_Curve);
     glGenBuffers(1, &VBO_Curve);
 
@@ -32,6 +35,10 @@ void Curve::drawCurve(glm::vec4 color)
 {
     if (curvePoints.empty() || VAO_Curve == 0) return;
 
+    if (!shader) {
+        std::cerr << "Curve shader not set!" << std::endl;
+        return;
+    }
     shader->Use();
     shader->setVec4("colorOverride", color.r, color.g, color.b, color.a); 
 

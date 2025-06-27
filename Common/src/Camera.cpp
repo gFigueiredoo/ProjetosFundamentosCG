@@ -11,6 +11,7 @@ Camera::Camera() :
     firstMouse(true),
     sensitivity(0.1f),
     windowWidth(0), windowHeight(0),
+    fov_(45.0f), aspect_(4.0f/3.0f), near_(0.1f), far_(100.0f),
     shader(nullptr)
 {
 }
@@ -31,7 +32,7 @@ void Camera::update()
 
     shader->setVec3("viewPos", cameraPos);
 
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(fov_), aspect_, near_, far_);
     shader->setMat4("projection", projection);
 }
 
@@ -96,5 +97,5 @@ glm::mat4 Camera::getViewMatrix() const
 
 glm::mat4 Camera::getProjectionMatrix() const
 {
-    return glm::perspective(glm::radians(45.0f), (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
+    return glm::perspective(glm::radians(fov_), aspect_, near_, far_);
 }
