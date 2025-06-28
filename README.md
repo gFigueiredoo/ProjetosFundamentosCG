@@ -33,10 +33,8 @@ N: Instancia um novo cubo
 
 ### Modulo 3: Desafio
 
-- Arquivo: m3.cpp
+- Arquivo: m4.cpp
 - Tarefa: https://www.moodle.unisinos.br/course/view.php?id=19514&section=16#tabs-tree-start
-
-![alt text]({3C4463D6-076D-48F2-AC02-0C1B2DD53AF1}.png)
 
 ### Modulo 4: Desafio
 
