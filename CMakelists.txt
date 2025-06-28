@@ -57,6 +57,13 @@ include_directories(${nlohmann_json_SOURCE_DIR}/single_include)
 
 # Lista de exemplos/exercícios podem ser colocados aqui também
 set(EXERCISES
+    Hello3D
+    m3
+    m4
+    m5
+    m6
+    Modulo2_Cubo
+    SpherePhong
     trab 
 )
 

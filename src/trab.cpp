@@ -1,7 +1,7 @@
 /*
- * m6.cpp - Adaptado para trabalho PreparacaoGrauB
+ * m6_reorganized.cpp - Adaptado para trabalho PreparacaoGrauB
  * 
- * Funcionalidades:
+ * Funcionalidades mantidas:
  * - Carrega múltiplos objetos da cena via arquivo JSON
  * - Suporta seleção de objetos e transformações (translação, rotação, escala)
  * - Controle de câmera com mouse e teclado
@@ -29,82 +29,125 @@ using namespace std;
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 700;
 
-bool rotateX = false;
-bool rotateY = false;
-bool rotateZ = false;
-
-int selectedObjectIndex = 0;
-
-Camera camera;
-std::vector<Mesh> meshes;
-std::vector<Bezier> bezierCurves;
-Scene scene;
-
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void setupWindow(GLFWwindow*& window);
-void resetAllRotate();
-
-int main()
-{
+class Application {
+private:
     GLFWwindow* window;
-    setupWindow(window);
 
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    glViewport(0, 0, width, height);
+    Camera camera;
+    std::vector<Mesh> meshes;
+    std::vector<Bezier> bezierCurves;
+    Scene scene;
 
-    Shader objectShader("../shaders/object.vs", "../shaders/object.fs");
-    Shader curveShader("../shaders/curve.vs", "../shaders/curve.fs");
+    Shader* objectShader;
+    Shader* curveShader;
 
-    // Carrega configuração da cena (arquivo JSON)
-    if (!scene.loadConfig("../assets/scene_config.json")) {
-        cerr << "Falha ao carregar configuração da cena. Saindo." << endl;
+    bool rotateX = false;
+    bool rotateY = false;
+    bool rotateZ = false;
+
+    int selectedObjectIndex = 0;
+
+    std::vector<float> trajectoryProgress;
+
+public:
+    Application() : window(nullptr), objectShader(nullptr), curveShader(nullptr) {}
+
+    void run() {
+        setupWindow();
+
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+        glViewport(0, 0, width, height);
+
+        Shader objShader("../shaders/object.vs", "../shaders/object.fs");
+        Shader curShader("../shaders/curve.vs", "../shaders/curve.fs");
+        objectShader = &objShader;
+        curveShader = &curShader;
+
+        if (!scene.loadConfig("../assets/scene_config.json")) {
+            cerr << "Falha ao carregar configuração da cena. Saindo." << endl;
+            glfwTerminate();
+            return;
+        }
+
+        camera.initialize(objectShader, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+        scene.setupScene(window, objectShader, &camera, meshes, bezierCurves);
+
+        camera.setCameraPosInitial(scene.cameraInitialPos);
+        camera.setCameraFrontInitial(scene.cameraInitialFront);
+        camera.setCameraUpInitial(scene.cameraInitialUp);
+        camera.setProjection(scene.cameraFov, (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, scene.cameraNearPlane, scene.cameraFarPlane);
+
+        objectShader->Use();
+        if (!scene.lightSources.empty()) {
+            objectShader->setVec3("light.position", scene.lightSources[0].position);
+            objectShader->setVec3("light.ambient", scene.lightSources[0].ambient);
+            objectShader->setVec3("light.diffuse", scene.lightSources[0].diffuse);
+            objectShader->setVec3("light.specular", scene.lightSources[0].specular);
+        }
+
+        trajectoryProgress.resize(bezierCurves.size(), 0.0f);
+
+        // Configura callbacks com ponteiros para métodos estáticos que redirecionam para esta instância
+        glfwSetWindowUserPointer(window, this);
+        glfwSetKeyCallback(window, keyCallbackWrapper);
+        glfwSetCursorPosCallback(window, mouseCallbackWrapper);
+
+        double lastFrameTime = glfwGetTime();
+
+        while (!glfwWindowShouldClose(window)) {
+            double currentFrameTime = glfwGetTime();
+            double deltaTime = currentFrameTime - lastFrameTime;
+            lastFrameTime = currentFrameTime;
+
+            glfwPollEvents();
+
+            glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            objectShader->Use();
+            camera.update();
+
+            updateBezierPositions(deltaTime);
+            updateAndDrawMeshes();
+            drawBezierCurves();
+
+            glfwSwapBuffers(window);
+        }
+
+        cleanup();
         glfwTerminate();
-        return -1;
     }
 
-    // Inicializa câmera com shader e janela
-    camera.initialize(&objectShader, WINDOW_WIDTH, WINDOW_HEIGHT);
+private:
+    void setupWindow() {
+        glfwInit();
 
-    // Configura a cena: carrega objetos, materiais, texturas, trajetórias
-    scene.setupScene(window, &objectShader, &camera, meshes, bezierCurves);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // Configura posição e orientação inicial da câmera
-    camera.setCameraPosInitial(scene.cameraInitialPos);
-    camera.setCameraFrontInitial(scene.cameraInitialFront);
-    camera.setCameraUpInitial(scene.cameraInitialUp);
-    camera.setProjection(scene.cameraFov, (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, scene.cameraNearPlane, scene.cameraFarPlane);
+        window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "PreparacaoGrauB - Gabriel", nullptr, nullptr);
+        glfwMakeContextCurrent(window);
 
-    // Configura iluminação Phong no shader com a primeira fonte de luz da cena
-    objectShader.Use();
-    if (!scene.lightSources.empty()) {
-        objectShader.setVec3("light.position", scene.lightSources[0].position);
-        objectShader.setVec3("light.ambient", scene.lightSources[0].ambient);
-        objectShader.setVec3("light.diffuse", scene.lightSources[0].diffuse);
-        objectShader.setVec3("light.specular", scene.lightSources[0].specular);
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+            cout << "Falha ao inicializar GLAD" << endl;
+        }
+
+        const GLubyte* renderer = glGetString(GL_RENDERER);
+        const GLubyte* version = glGetString(GL_VERSION);
+        cout << "Renderer: " << renderer << endl;
+        cout << "OpenGL version supported " << version << endl;
+
+        glEnable(GL_DEPTH_TEST);
     }
 
-    double lastFrameTime = glfwGetTime();
-
-    while (!glfwWindowShouldClose(window))
-    {
-        double currentFrameTime = glfwGetTime();
-        double deltaTime = currentFrameTime - lastFrameTime;
-        lastFrameTime = currentFrameTime;
-
-        glfwPollEvents();
-
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        objectShader.Use();
-        camera.update();
-
-        // Atualiza posição dos objetos animados por curvas de Bezier
+    void updateBezierPositions(double deltaTime) {
         for (size_t i = 0; i < meshes.size(); ++i) {
             if (i < bezierCurves.size() && bezierCurves[i].getFollowTrajectory()) {
-                static std::vector<float> trajectoryProgress(bezierCurves.size(), 0.0f);
                 int numCurvePoints = bezierCurves[i].getNbCurvePoints();
                 if (numCurvePoints > 0) {
                     trajectoryProgress[i] += bezierCurves[i].getSpeed() * deltaTime * 100.0f;
@@ -118,8 +161,9 @@ int main()
                 }
             }
         }
+    }
 
-        // Atualiza e desenha os objetos
+    void updateAndDrawMeshes() {
         for (size_t i = 0; i < meshes.size(); ++i) {
             bool currentObjectRotationX = (i == selectedObjectIndex) ? rotateX : false;
             bool currentObjectRotationY = (i == selectedObjectIndex) ? rotateY : false;
@@ -128,155 +172,138 @@ int main()
             meshes[i].update(currentObjectRotationX, currentObjectRotationY, currentObjectRotationZ);
             meshes[i].draw();
         }
+    }
 
-        // Desenha as curvas de Bezier
+    void drawBezierCurves() {
         for (size_t i = 0; i < bezierCurves.size(); ++i) {
             if (bezierCurves[i].getNbCurvePoints() > 0) {
-                bezierCurves[i].setShader(&curveShader);
+                bezierCurves[i].setShader(curveShader);
                 bezierCurves[i].drawCurve(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
             }
         }
-
-        glfwSwapBuffers(window);
     }
 
-    // Limpa VAOs dos meshes
-    for (const auto& mesh : meshes) {
-        glDeleteVertexArrays(1, &mesh.VAO);
-    }
-
-    glfwTerminate();
-    return 0;
-}
-
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
-{
-    float scaleStep = 0.05f;
-    float translateStep = 0.1f;
-
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GL_TRUE);
-
-    // Seleção de objeto com teclas 1 a 9
-    if (key >= GLFW_KEY_1 && key <= GLFW_KEY_9 && action == GLFW_PRESS) {
-        int index = key - GLFW_KEY_1;
-        if (index < meshes.size()) {
-            selectedObjectIndex = index;
-            resetAllRotate();
-            cout << "Objeto selecionado: " << scene.objects[selectedObjectIndex].name << endl;
+    void cleanup() {
+        for (const auto& mesh : meshes) {
+            glDeleteVertexArrays(1, &mesh.VAO);
         }
     }
 
-    if (selectedObjectIndex < meshes.size()) {
-        glm::vec3 currentObjectPos = meshes[selectedObjectIndex].getPosition();
-        if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-            switch (key) {
-                case GLFW_KEY_LEFT_BRACKET:
-                    meshes[selectedObjectIndex].setScale(meshes[selectedObjectIndex].scale_ * (1.0f - scaleStep));
-                    break;
-                case GLFW_KEY_RIGHT_BRACKET:
-                    meshes[selectedObjectIndex].setScale(meshes[selectedObjectIndex].scale_ * (1.0f + scaleStep));
-                    break;
-                case GLFW_KEY_X:
-                    resetAllRotate();
-                    rotateX = true;
-                    break;
-                case GLFW_KEY_Y:
-                    resetAllRotate();
-                    rotateY = true;
-                    break;
-                case GLFW_KEY_Z:
-                    resetAllRotate();
-                    rotateZ = true;
-                    break;
-                case GLFW_KEY_P:
-                    resetAllRotate();
-                    meshes[selectedObjectIndex].setPosition(scene.objects[selectedObjectIndex].initial_transform.position);
-                    meshes[selectedObjectIndex].setRotation(scene.objects[selectedObjectIndex].initial_transform.rotation_angle, scene.objects[selectedObjectIndex].initial_transform.rotation_axis);
-                    meshes[selectedObjectIndex].setScale(scene.objects[selectedObjectIndex].initial_transform.scale);
-                    cout << "Transformações do objeto " << scene.objects[selectedObjectIndex].name << " resetadas." << endl;
-                    break;
-                case GLFW_KEY_UP:
-                    currentObjectPos.z -= translateStep;
-                    meshes[selectedObjectIndex].setCurrentPosition(currentObjectPos);
-                    break;
-                case GLFW_KEY_DOWN:
-                    currentObjectPos.z += translateStep;
-                    meshes[selectedObjectIndex].setCurrentPosition(currentObjectPos);
-                    break;
-                case GLFW_KEY_LEFT:
-                    currentObjectPos.x -= translateStep;
-                    meshes[selectedObjectIndex].setCurrentPosition(currentObjectPos);
-                    break;
-                case GLFW_KEY_RIGHT:
-                    currentObjectPos.x += translateStep;
-                    meshes[selectedObjectIndex].setCurrentPosition(currentObjectPos);
-                    break;
-                case GLFW_KEY_PAGE_UP:
-                    currentObjectPos.y += translateStep;
-                    meshes[selectedObjectIndex].setCurrentPosition(currentObjectPos);
-                    break;
-                case GLFW_KEY_PAGE_DOWN:
-                    currentObjectPos.y -= translateStep;
-                    meshes[selectedObjectIndex].setCurrentPosition(currentObjectPos);
-                    break;
-                case GLFW_KEY_V:
-                    if (selectedObjectIndex < bezierCurves.size()) {
-                        if (selectedObjectIndex < scene.objects.size() && scene.objects[selectedObjectIndex].animation.type == "bezier") {
-                            bezierCurves[selectedObjectIndex].setFollowTrajectory(!bezierCurves[selectedObjectIndex].getFollowTrajectory());
-                            cout << "Trajetória para " << scene.objects[selectedObjectIndex].name << " "
-                                 << (bezierCurves[selectedObjectIndex].getFollowTrajectory() ? "ativada." : "desativada.") << endl;
-                        } else {
-                            cout << "Nenhuma trajetória Bezier definida para o objeto selecionado." << endl;
-                        }
-                    } else {
-                        cout << "Nenhum dado de trajetória disponível para o objeto selecionado." << endl;
-                    }
-                    break;
+    void resetAllRotate() {
+        rotateX = false;
+        rotateY = false;
+        rotateZ = false;
+    }
+
+    // Callbacks precisam ser estáticos para usar com GLFW, então redirecionam para o método da instância
+    static void keyCallbackWrapper(GLFWwindow* window, int key, int scancode, int action, int mode) {
+        Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+        if (app) app->key_callback(window, key, scancode, action, mode);
+    }
+
+    static void mouseCallbackWrapper(GLFWwindow* window, double xpos, double ypos) {
+        Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+        if (app) app->mouse_callback(window, xpos, ypos);
+    }
+
+    void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) {
+        float scaleStep = 0.05f;
+        float translateStep = 0.1f;
+
+        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+            glfwSetWindowShouldClose(window, GL_TRUE);
+
+        if (key >= GLFW_KEY_1 && key <= GLFW_KEY_9 && action == GLFW_PRESS) {
+            int index = key - GLFW_KEY_1;
+            if (index < meshes.size()) {
+                selectedObjectIndex = index;
+                resetAllRotate();
+                cout << "Objeto selecionado: " << scene.objects[selectedObjectIndex].name << endl;
             }
         }
+
+        if (selectedObjectIndex < meshes.size()) {
+            glm::vec3 currentObjectPos = meshes[selectedObjectIndex].getPosition();
+            if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+                switch (key) {
+                    case GLFW_KEY_LEFT_BRACKET:
+                        meshes[selectedObjectIndex].setScale(meshes[selectedObjectIndex].scale_ * (1.0f - scaleStep));
+                        break;
+                    case GLFW_KEY_RIGHT_BRACKET:
+                        meshes[selectedObjectIndex].setScale(meshes[selectedObjectIndex].scale_ * (1.0f + scaleStep));
+                        break;
+                    case GLFW_KEY_X:
+                        resetAllRotate();
+                        rotateX = true;
+                        break;
+                    case GLFW_KEY_Y:
+                        resetAllRotate();
+                        rotateY = true;
+                        break;
+                    case GLFW_KEY_Z:
+                        resetAllRotate();
+                        rotateZ = true;
+                        break;
+                    case GLFW_KEY_P:
+                        resetAllRotate();
+                        meshes[selectedObjectIndex].setPosition(scene.objects[selectedObjectIndex].initial_transform.position);
+                        meshes[selectedObjectIndex].setRotation(scene.objects[selectedObjectIndex].initial_transform.rotation_angle, scene.objects[selectedObjectIndex].initial_transform.rotation_axis);
+                        meshes[selectedObjectIndex].setScale(scene.objects[selectedObjectIndex].initial_transform.scale);
+                        cout << "Transformações do objeto " << scene.objects[selectedObjectIndex].name << " resetadas." << endl;
+                        break;
+                    case GLFW_KEY_UP:
+                        currentObjectPos.z -= translateStep;
+                        meshes[selectedObjectIndex].setCurrentPosition(currentObjectPos);
+                        break;
+                    case GLFW_KEY_DOWN:
+                        currentObjectPos.z += translateStep;
+                        meshes[selectedObjectIndex].setCurrentPosition(currentObjectPos);
+                        break;
+                    case GLFW_KEY_LEFT:
+                        currentObjectPos.x -= translateStep;
+                        meshes[selectedObjectIndex].setCurrentPosition(currentObjectPos);
+                        break;
+                    case GLFW_KEY_RIGHT:
+                        currentObjectPos.x += translateStep;
+                        meshes[selectedObjectIndex].setCurrentPosition(currentObjectPos);
+                        break;
+                    case GLFW_KEY_PAGE_UP:
+                        currentObjectPos.y += translateStep;
+                        meshes[selectedObjectIndex].setCurrentPosition(currentObjectPos);
+                        break;
+                    case GLFW_KEY_PAGE_DOWN:
+                        currentObjectPos.y -= translateStep;
+                        meshes[selectedObjectIndex].setCurrentPosition(currentObjectPos);
+                        break;
+                    case GLFW_KEY_V:
+                        if (selectedObjectIndex < bezierCurves.size()) {
+                            if (selectedObjectIndex < scene.objects.size() && scene.objects[selectedObjectIndex].animation.type == "bezier") {
+                                bezierCurves[selectedObjectIndex].setFollowTrajectory(!bezierCurves[selectedObjectIndex].getFollowTrajectory());
+                                cout << "Trajetória para " << scene.objects[selectedObjectIndex].name << " "
+                                     << (bezierCurves[selectedObjectIndex].getFollowTrajectory() ? "ativada." : "desativada.") << endl;
+                            } else {
+                                cout << "Nenhuma trajetória Bezier definida para o objeto selecionado." << endl;
+                            }
+                        } else {
+                            cout << "Nenhum dado de trajetória disponível para o objeto selecionado." << endl;
+                        }
+                        break;
+                }
+            }
+        }
+
+        if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+            camera.setCameraPos(key);
+        }
     }
 
-    if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-        camera.setCameraPos(key);
+    void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+        camera.mouseCallback(window, xpos, ypos);
     }
-}
+};
 
-void mouse_callback(GLFWwindow* window, double xpos, double ypos)
-{
-    camera.mouseCallback(window, xpos, ypos);
-}
-
-void setupWindow(GLFWwindow*& window) {
-    glfwInit();
-
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "PreparacaoGrauB - Gabriel", nullptr, nullptr);
-    glfwMakeContextCurrent(window);
-
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetCursorPosCallback(window, mouse_callback);
-
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        cout << "Falha ao inicializar GLAD" << endl;
-    }
-
-    const GLubyte* renderer = glGetString(GL_RENDERER);
-    const GLubyte* version = glGetString(GL_VERSION);
-    cout << "Renderer: " << renderer << endl;
-    cout << "OpenGL version supported " << version << endl;
-
-    glEnable(GL_DEPTH_TEST);
-}
-
-void resetAllRotate() {
-    rotateX = false;
-    rotateY = false;
-    rotateZ = false;
+int main() {
+    Application app;
+    app.run();
+    return 0;
 }
