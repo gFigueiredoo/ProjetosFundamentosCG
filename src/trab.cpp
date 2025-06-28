@@ -1,7 +1,7 @@
 /*
- * m6_reorganized.cpp - Adaptado para trabalho PreparacaoGrauB
+ * m6_restructured.cpp - Adaptado para trabalho PreparacaoGrauB
  * 
- * Funcionalidades mantidas:
+ * Funcionalidades:
  * - Carrega múltiplos objetos da cena via arquivo JSON
  * - Suporta seleção de objetos e transformações (translação, rotação, escala)
  * - Controle de câmera com mouse e teclado
@@ -32,14 +32,10 @@ const int WINDOW_HEIGHT = 700;
 class Application {
 private:
     GLFWwindow* window;
-
     Camera camera;
     std::vector<Mesh> meshes;
     std::vector<Bezier> bezierCurves;
     Scene scene;
-
-    Shader* objectShader;
-    Shader* curveShader;
 
     bool rotateX = false;
     bool rotateY = false;
@@ -47,10 +43,13 @@ private:
 
     int selectedObjectIndex = 0;
 
+    Shader* objectShader = nullptr;
+    Shader* curveShader = nullptr;
+
     std::vector<float> trajectoryProgress;
 
 public:
-    Application() : window(nullptr), objectShader(nullptr), curveShader(nullptr) {}
+    Application() : window(nullptr) {}
 
     void run() {
         setupWindow();
@@ -89,11 +88,6 @@ public:
 
         trajectoryProgress.resize(bezierCurves.size(), 0.0f);
 
-        // Configura callbacks com ponteiros para métodos estáticos que redirecionam para esta instância
-        glfwSetWindowUserPointer(window, this);
-        glfwSetKeyCallback(window, keyCallbackWrapper);
-        glfwSetCursorPosCallback(window, mouseCallbackWrapper);
-
         double lastFrameTime = glfwGetTime();
 
         while (!glfwWindowShouldClose(window)) {
@@ -109,43 +103,22 @@ public:
             objectShader->Use();
             camera.update();
 
-            updateBezierPositions(deltaTime);
+            updateBezierAnimations(deltaTime);
+
             updateAndDrawMeshes();
+
             drawBezierCurves();
 
             glfwSwapBuffers(window);
         }
 
         cleanup();
+
         glfwTerminate();
     }
 
 private:
-    void setupWindow() {
-        glfwInit();
-
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-        window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "PreparacaoGrauB - Gabriel", nullptr, nullptr);
-        glfwMakeContextCurrent(window);
-
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-            cout << "Falha ao inicializar GLAD" << endl;
-        }
-
-        const GLubyte* renderer = glGetString(GL_RENDERER);
-        const GLubyte* version = glGetString(GL_VERSION);
-        cout << "Renderer: " << renderer << endl;
-        cout << "OpenGL version supported " << version << endl;
-
-        glEnable(GL_DEPTH_TEST);
-    }
-
-    void updateBezierPositions(double deltaTime) {
+    void updateBezierAnimations(double deltaTime) {
         for (size_t i = 0; i < meshes.size(); ++i) {
             if (i < bezierCurves.size() && bezierCurves[i].getFollowTrajectory()) {
                 int numCurvePoints = bezierCurves[i].getNbCurvePoints();
@@ -189,24 +162,53 @@ private:
         }
     }
 
+    void setupWindow() {
+        glfwInit();
+
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+        window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "PreparacaoGrauB - Gabriel", nullptr, nullptr);
+        glfwMakeContextCurrent(window);
+
+        glfwSetWindowUserPointer(window, this);
+
+        glfwSetKeyCallback(window, keyCallbackStatic);
+        glfwSetCursorPosCallback(window, mouseCallbackStatic);
+
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+            cout << "Falha ao inicializar GLAD" << endl;
+        }
+
+        const GLubyte* renderer = glGetString(GL_RENDERER);
+        const GLubyte* version = glGetString(GL_VERSION);
+        cout << "Renderer: " << renderer << endl;
+        cout << "OpenGL version supported " << version << endl;
+
+        glEnable(GL_DEPTH_TEST);
+    }
+
     void resetAllRotate() {
         rotateX = false;
         rotateY = false;
         rotateZ = false;
     }
 
-    // Callbacks precisam ser estáticos para usar com GLFW, então redirecionam para o método da instância
-    static void keyCallbackWrapper(GLFWwindow* window, int key, int scancode, int action, int mode) {
+    // Callbacks need to be static to match GLFW signature, so we forward to instance methods
+    static void keyCallbackStatic(GLFWwindow* window, int key, int scancode, int action, int mode) {
         Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-        if (app) app->key_callback(window, key, scancode, action, mode);
+        if (app) app->keyCallback(window, key, scancode, action, mode);
     }
 
-    static void mouseCallbackWrapper(GLFWwindow* window, double xpos, double ypos) {
+    static void mouseCallbackStatic(GLFWwindow* window, double xpos, double ypos) {
         Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-        if (app) app->mouse_callback(window, xpos, ypos);
+        if (app) app->mouseCallback(window, xpos, ypos);
     }
 
-    void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) {
+    void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode) {
         float scaleStep = 0.05f;
         float translateStep = 0.1f;
 
@@ -297,7 +299,7 @@ private:
         }
     }
 
-    void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
         camera.mouseCallback(window, xpos, ypos);
     }
 };
